@@ -43,6 +43,7 @@ class Process{
         return "Process{" +
                 "processName='" + processName + '\'' +
                 ", processSize=" + processSize +
+                ", isAllocated=" + isAllocated +
                 '}';
     }
 }
@@ -127,41 +128,78 @@ class MemAllocator{
         if(policy!="First-Fit"){
             return;
         }
-        for (int i = 0; i < processes.size(); i++) {
-            for (int j = 0; j < memory.size(); j++) {
-                if(!memory.get(i).getIsOccupied() && processes.get(i).getProcessSize()<=memory.get(j).getPartitionSize()){
-                    processes.get(i).setIsAllocated(true);
-                    if (memory.get(j).getPartitionSize()>processes.get(i).getProcessSize()){
-                        Integer remainingSize=memory.get(j).getPartitionSize()-processes.get(i).getProcessSize();
+        Integer count=0;
+        while(true){
+            for (int i = 0; i < processes.size(); i++) {
+                for (int j = 0; j < memory.size(); j++) {
+                    if(!memory.get(j).getIsOccupied() && processes.get(i).getProcessSize()<=memory.get(j).getPartitionSize()){
+                        processes.get(i).setIsAllocated(true);
+                        if (memory.get(j).getPartitionSize()>processes.get(i).getProcessSize()){
+                            Integer remainingSize=memory.get(j).getPartitionSize()-processes.get(i).getProcessSize();
 
-                        memory.get(j).setPartitionSize(processes.get(i).getProcessSize());
+                            memory.get(j).setPartitionSize(processes.get(i).getProcessSize());
 
-                        partitionCount++;
-                        Partition newPartition = new Partition("Partition"+partitionCount,remainingSize,"",false);
-                        memory.add(memory.indexOf(memory.get(j))+1,newPartition);
+                            partitionCount++;
+                            Partition newPartition = new Partition("Partition"+partitionCount,remainingSize,"",false);
+                            memory.add(memory.indexOf(memory.get(j))+1,newPartition);
 
+                        }
+                        memory.get(j).setIsOccupied(true);
+                        memory.get(j).setProcessInPartition(processes.get(i).getProcessName());
+                        break;
                     }
-                    memory.get(j).setIsOccupied(true);
-                    memory.get(j).setProcessInPartition(processes.get(i).getProcessName());
-                    break;
+                }
+
+            }
+            String notAllocated="\n";
+            for (int i = 0; i < processes.size(); i++) {
+                if(!processes.get(i).getIsAllocated()){
+                    notAllocated+=processes.get(i).getProcessName()+" can not be allocated\n";
                 }
             }
+            for (int i = 0; i < memory.size(); i++) {
+                if (memory.get(i).getProcessInPartition() != "") {
+                    System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => "+memory.get(i).getProcessInPartition());
+                    continue;
+                }
+                System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => External fragment");
+            }
+            System.out.println(notAllocated);
+            if(count>0){break;}
+            count++;
+            Scanner scanner= new Scanner(System.in);
+            System.out.print("\nDo you want to compact? 1.yes 2.no\nSelect:");
+            Integer choice=scanner.nextInt();
+            if(choice==1){
+                int freeMemorySize=0;
+                for (int i = 0; i < memory.size(); i++) {
+                    if (memory.get(i).getProcessInPartition() == "") {
+                        freeMemorySize+=memory.get(i).getPartitionSize();
+                    }
+                }
 
-        }
-        String notAllocated="\n";
-        for (int i = 0; i < processes.size(); i++) {
-            if(!processes.get(i).getIsAllocated()){
-                notAllocated+=processes.get(i).getProcessName()+" can not be allocated\n";
+                List<Partition> memoryOccupied=new ArrayList<Partition>();
+                for (int i = 0; i < memory.size(); i++) {
+                    if (memory.get(i).getIsOccupied()==true) {
+                        memoryOccupied.add(memory.get(i));
+                    }
+                }
+                memory=memoryOccupied;
+                List<Process> leftProcesses=new ArrayList<Process>();
+                for (int i = 0; i < processes.size(); i++) {
+                    if(processes.get(i).getIsAllocated()==false){
+                        leftProcesses.add(processes.get(i));
+                    }
+                }
+                processes=leftProcesses;
+                partitionCount++;
+                Partition freeMemoryPartition = new Partition("Partition"+partitionCount,freeMemorySize,"",false);
+                memory.add(freeMemoryPartition);
+            } else if (choice==2) {
+                break;
             }
         }
-        for (int i = 0; i < memory.size(); i++) {
-            if (memory.get(i).getProcessInPartition() != "") {
-                System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => "+memory.get(i).getProcessInPartition());
-                continue;
-            }
-            System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => External fragment");
-        }
-        System.out.println(notAllocated);
+
 
     }
     public void runWorstFit(){
@@ -244,7 +282,6 @@ public class Main {
         System.out.println(choice);
         if(choice==1){
             //Run first fit
-            System.out.println("FF");
             MemAllocator memAllocator= new MemAllocator("First-Fit",memoryCpFirstFit,processes,partitionCount);
             memAllocator.runFirstFit();
         } else if (choice==2) {
