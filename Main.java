@@ -2,6 +2,8 @@ package org.example;
 
 import java.util.*;
 
+import static java.lang.System.exit;
+
 class Process{
     private String processName;
     private Integer processSize;
@@ -150,7 +152,7 @@ class MemAllocator{
                             memory.get(j).setPartitionSize(processes.get(i).getProcessSize());
 
                             partitionCount++;
-                            Partition newPartition = new Partition("Partition"+partitionCount,remainingSize,"",false);
+                            Partition newPartition = new Partition("Partition "+partitionCount,remainingSize,"",false);
                             memory.add(memory.indexOf(memory.get(j))+1,newPartition);
 
                         }
@@ -177,7 +179,7 @@ class MemAllocator{
             System.out.println(notAllocated);
             if(count>0){break;}
             count++;
-            System.out.print("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
+            System.out.println("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
             String choice=scanner.next();
             if(choice.equals(new String("1"))){
                 notAllocated="\n";
@@ -203,7 +205,7 @@ class MemAllocator{
                 }
                 processes=leftProcesses;
                 partitionCount++;
-                Partition freeMemoryPartition = new Partition("Partition"+partitionCount,freeMemorySize,"",false);
+                Partition freeMemoryPartition = new Partition("Partition "+partitionCount,freeMemorySize,"",false);
                 memory.add(freeMemoryPartition);
             } else if (choice.equals(new String("2"))) {
                 break;
@@ -251,7 +253,7 @@ class MemAllocator{
                         memory.get(memory.indexOf(worstFitPartition)).setPartitionSize(processes.get(i).getProcessSize());
 
                         partitionCount++;
-                        Partition newPartition = new Partition("Partition"+partitionCount,remainingSize,"",false);
+                        Partition newPartition = new Partition("Partition "+partitionCount,remainingSize,"",false);
                         memory.add(memory.indexOf(worstFitPartition)+1,newPartition);
                     }
                     worstFitPartition.setIsOccupied(true);
@@ -271,7 +273,7 @@ class MemAllocator{
             System.out.println(notAllocated);
             if(count>0){break;}
             count++;
-            System.out.print("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
+            System.out.println("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
             String choice=scanner.next();
             if(choice.equals(new String("1"))){
                 notAllocated="\n";
@@ -297,7 +299,7 @@ class MemAllocator{
                 }
                 processes=leftProcesses;
                 partitionCount++;
-                Partition freeMemoryPartition = new Partition("Partition"+partitionCount,freeMemorySize,"",false);
+                Partition freeMemoryPartition = new Partition("Partition "+partitionCount,freeMemorySize,"",false);
                 memory.add(freeMemoryPartition);
             } else if (choice.equals(new String("2"))) {
                 break;
@@ -344,7 +346,7 @@ class MemAllocator{
                         memory.get(memory.indexOf(bestFitPartition)).setPartitionSize(processes.get(i).getProcessSize());
 
                         partitionCount++;
-                        Partition newPartition = new Partition("Partition"+partitionCount,remainingSize,"",false);
+                        Partition newPartition = new Partition("Partition "+partitionCount,remainingSize,"",false);
                         memory.add(memory.indexOf(bestFitPartition)+1,newPartition);
                     }
                     bestFitPartition.setIsOccupied(true);
@@ -364,7 +366,7 @@ class MemAllocator{
             System.out.println(notAllocated);
             if(count>0){break;}
             count++;
-            System.out.print("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
+            System.out.println("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
             String choice=scanner.next();
             if(choice.equals(new String("1"))){
                 notAllocated="\n";
@@ -390,7 +392,7 @@ class MemAllocator{
                 }
                 processes=leftProcesses;
                 partitionCount++;
-                Partition freeMemoryPartition = new Partition("Partition"+partitionCount,freeMemorySize,"",false);
+                Partition freeMemoryPartition = new Partition("Partition "+partitionCount,freeMemorySize,"",false);
                 memory.add(freeMemoryPartition);
             } else if (choice.equals(new String("2"))){
                 break;
@@ -406,7 +408,7 @@ public class Main {
     public static void main(String[] args) {
         //In java memory.add(index, elem)
         // this element will be in that index, and what was in that index will be pushed to the right
-        Scanner scanner= new Scanner(System.in);
+        Scanner scanner= new Scanner(System.in).useDelimiter("\n");
         System.out.print("Enter the number of partitions: ");
         int numberOfPartitions = scanner.nextInt();
 
@@ -415,15 +417,19 @@ public class Main {
         Integer partitionSize=0;
 
         Integer partitionCount=0;
+        String partitionCountString="";
         System.out.print("\n------------------- Input of the info of the "+numberOfPartitions+" partitions -------------------");
         for(int i=0;i<numberOfPartitions;i++){
-            System.out.println("\nPartition name and its size: ");
+            System.out.println("\n---------- #"+(i+1)+" ----------");
+            System.out.println("Partition name:");
             partitionName=scanner.next();
+            System.out.println("Partition size:");
             partitionSize=scanner.nextInt();
-            if(i==numberOfPartitions-1){
-                partitionCount=Integer.parseInt(String.valueOf(partitionName.charAt(partitionName.length()-1)));
-            }
+
             memory.add(new Partition(partitionName, partitionSize,"",false));
+            partitionCountString=partitionName;
+            partitionCountString=partitionCountString.replaceAll("[^0-9]", "");
+            partitionCount=Integer.parseInt(partitionCountString);
         }
 
         System.out.println("\n=========================================================================");
@@ -436,8 +442,10 @@ public class Main {
         System.out.print("\n------------------- Input of the info of the "+numberOfProcesses+" processes -------------------");
 
         for(int i=0;i<numberOfProcesses;i++){
-            System.out.println("\nProcess name and its size: ");
+            System.out.println("\n---------- #"+(i+1)+" ----------");
+            System.out.println("Process name:");
             processName=scanner.next();
+            System.out.println("Process size:");
             processSize=scanner.nextInt();
 
             processes.add(new Process(processName, processSize, false));
@@ -445,7 +453,7 @@ public class Main {
         //Policies
         while(true){
             System.out.println("\n=========================================================================");
-            System.out.print("\nSelect the policy you want to apply:\n1. First fit\n2. Best fit\n3. Worst fit\n q To quit program\nSelect policy/choice:");
+            System.out.println("\nSelect the policy you want to apply:\n1. First fit\n2. Best fit\n3. Worst fit\n q To quit program\nSelect policy/choice:");
             String choice=scanner.next();
             if(choice.equals(new String("1"))){
                 //First fit
