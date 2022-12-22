@@ -1,9 +1,12 @@
 package org.example;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
-import static java.lang.System.exit;
-
+/*
+Student name: Mostafa Ibrahim Abdellatif, Student ID: 20205006, Group: NCS1
+* */
 class Process{
     private String processName;
     private Integer processSize;
@@ -121,21 +124,25 @@ class MemAllocator{
     Integer partitionCount;
 
     public MemAllocator(String policy, List<Partition> memory, List<Process> processes, Integer partitionCount) {
-        this.policy = policy;
+        this.policy = policy;//Setting the policy of the memory allocator
         this.memory = new ArrayList<Partition>();
+        //just copying the original list of partitions (in order not to change the list itself as i am passing it multiple times)
         for (int i = 0; i < memory.size(); i++) {
             this.memory.add(new Partition(memory.get(i).getPartitionName(),memory.get(i).getPartitionSize(),"",memory.get(i).getIsOccupied()));
         }
         this.processes=new ArrayList<Process>();
+        //just copying the original list of processes (in order not to change the list itself as i am passing it multiple times)
         for (int i = 0; i < processes.size(); i++) {
             this.processes.add(new Process(
                     processes.get(i).getProcessName(),
                     processes.get(i).getProcessSize(),
                     processes.get(i).getIsAllocated()));
         }
+        //the largest partition number entered (the number in the partition name), new partitions will increment to this count
         this.partitionCount=partitionCount;
     }
     public void runFirstFit(){
+        //making sure not to invoke by a memory allocator already set to another policy
         if(policy!="First-Fit"){
             return;
         }
@@ -144,31 +151,39 @@ class MemAllocator{
         while(true){
             for (int i = 0; i < processes.size(); i++) {
                 for (int j = 0; j < memory.size(); j++) {
+                    //The first one that could fit the process (<=), and not occupied
                     if(!memory.get(j).getIsOccupied() && processes.get(i).getProcessSize()<=memory.get(j).getPartitionSize()){
-                        processes.get(i).setIsAllocated(true);
+                        processes.get(i).setIsAllocated(true);//set the process status to be allocated
+                        //now we check if it was larger, we create new partition out of the remaining size of the partition
                         if (memory.get(j).getPartitionSize()>processes.get(i).getProcessSize()){
+
                             Integer remainingSize=memory.get(j).getPartitionSize()-processes.get(i).getProcessSize();
 
+                            //allocating the original partition for the size of the process
                             memory.get(j).setPartitionSize(processes.get(i).getProcessSize());
 
+                            //we'll create a new partition, so we increment the latest largest partition number
                             partitionCount++;
+                            //Creating the new process of size=remaining size, setting it as not occupied
                             Partition newPartition = new Partition("Partition "+partitionCount,remainingSize,"",false);
                             memory.add(memory.indexOf(memory.get(j))+1,newPartition);
 
                         }
-                        memory.get(j).setIsOccupied(true);
-                        memory.get(j).setProcessInPartition(processes.get(i).getProcessName());
-                        break;
+                        memory.get(j).setIsOccupied(true);//set the partition to be allocated
+                        memory.get(j).setProcessInPartition(processes.get(i).getProcessName());//set process to be in the partition
+                        break;//break out of memory looping, because we've already found the first fit
                     }
                 }
 
             }
             String notAllocated="\n";
+            //Getting the processes that we didn't find a fit for (for print)
             for (int i = 0; i < processes.size(); i++) {
                 if(!processes.get(i).getIsAllocated()){
                     notAllocated+=processes.get(i).getProcessName()+" can not be allocated\n";
                 }
             }
+            //Printing partitions and processes allocated to them (or external fragments)
             for (int i = 0; i < memory.size(); i++) {
                 if (memory.get(i).getProcessInPartition() != "") {
                     System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => "+memory.get(i).getProcessInPartition());
@@ -177,37 +192,44 @@ class MemAllocator{
                 System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => External fragment");
             }
             System.out.println(notAllocated);
+
+            //This count just to return back to first fit allocation after choosing to compact
+            // (for the not allocated, we allocate them after compaction if a partition was suitable)
             if(count>0){break;}
             count++;
             System.out.println("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
             String choice=scanner.next();
-            if(choice.equals(new String("1"))){
+            if(choice.equals(new String("1"))){//yes
                 notAllocated="\n";
                 int freeMemorySize=0;
                 for (int i = 0; i < memory.size(); i++) {
                     if (memory.get(i).getProcessInPartition() == "") {
-                        freeMemorySize+=memory.get(i).getPartitionSize();
+                        freeMemorySize+=memory.get(i).getPartitionSize();//Getting total free memory
                     }
                 }
 
                 List<Partition> memoryOccupied=new ArrayList<Partition>();
                 for (int i = 0; i < memory.size(); i++) {
                     if (memory.get(i).getIsOccupied()==true) {
-                        memoryOccupied.add(memory.get(i));
+                        memoryOccupied.add(memory.get(i));//Getting just the ones that were occupied,
+                        // as we will create a one large partition out of the free memory
                     }
                 }
                 memory=memoryOccupied;
+
                 List<Process> leftProcesses=new ArrayList<Process>();
                 for (int i = 0; i < processes.size(); i++) {
                     if(processes.get(i).getIsAllocated()==false){
-                        leftProcesses.add(processes.get(i));
+                        leftProcesses.add(processes.get(i));//Getting not allocated processes
                     }
                 }
                 processes=leftProcesses;
+
+                //Creating the new partition of size == free memory available
                 partitionCount++;
                 Partition freeMemoryPartition = new Partition("Partition "+partitionCount,freeMemorySize,"",false);
                 memory.add(freeMemoryPartition);
-            } else if (choice.equals(new String("2"))) {
+            } else if (choice.equals(new String("2"))) {//no
                 break;
             }else{
                 System.out.println("Invalid choice");
@@ -217,13 +239,15 @@ class MemAllocator{
 
 
     }
-    private Partition getMaxDiff(Integer processSize){
+    private Partition getMaxDiff(Integer processSize){//For the worst fit
         Integer MIN=0;
         for (int i = 0; i < memory.size(); i++) {MIN+=memory.get(i).getPartitionSize();}
+        //just init value for comparison and to check with if we didn't find the worst fit(not allocated)
         Partition maxDiffPartition=new Partition("None",-MIN,"None",true);
         for (int i = 0; i < memory.size(); i++) {
             if(!memory.get(i).getIsOccupied()){
                 Integer currentDiff=memory.get(i).getPartitionSize()-processSize;
+                //check if the difference between the current partition size and the process size are actually worse/larger, if so we set it as the worst fit
                 if(currentDiff>=0 && currentDiff>maxDiffPartition.getPartitionSize()-processSize){
                     maxDiffPartition=memory.get(i);
                 }
@@ -233,6 +257,7 @@ class MemAllocator{
         return maxDiffPartition;
     }
     public void runWorstFit(){
+        //making sure not to invoke by a memory allocator already set to another policy
         if(policy!="Worst-Fit"){
             return;
         }
@@ -242,27 +267,36 @@ class MemAllocator{
         while(true){
             for (int i = 0; i < processes.size(); i++) {
                 Partition worstFitPartition=getMaxDiff(processes.get(i).getProcessSize());
+                //If we didn't find the worst fit, can't be allocated
                 if(worstFitPartition.getPartitionName()=="None"){
                     notAllocated+=processes.get(i).getProcessName()+" can not be allocated\n";
                 }else{
-                    processes.get(i).setIsAllocated(true);
+                    processes.get(i).setIsAllocated(true);//set the process status to be allocated
+
+                    //now we check if it was larger, we create new partition out of the remaining size of the partition
                     if(worstFitPartition.getPartitionSize()>processes.get(i).getProcessSize()){
                         Integer remainingSize=worstFitPartition.getPartitionSize()-processes.get(i).getProcessSize();
 
+                        //allocating the original partition for the size of the process
                         worstFitPartition.setPartitionSize(processes.get(i).getProcessSize());
                         memory.get(memory.indexOf(worstFitPartition)).setPartitionSize(processes.get(i).getProcessSize());
 
+                        //we'll create a new partition, so we increment the latest largest partition number
                         partitionCount++;
+                        //Creating the new process of size=remaining size, setting it as not occupied
                         Partition newPartition = new Partition("Partition "+partitionCount,remainingSize,"",false);
                         memory.add(memory.indexOf(worstFitPartition)+1,newPartition);
                     }
+                    //set the partition to be allocated
                     worstFitPartition.setIsOccupied(true);
                     memory.get(memory.indexOf(worstFitPartition)).setIsOccupied(true);
 
+                    //set process to be in the partition
                     worstFitPartition.setProcessInPartition(processes.get(i).getProcessName());
                     memory.get(memory.indexOf(worstFitPartition)).setProcessInPartition(processes.get(i).getProcessName());
                 }
             }
+            //Printing partitions and processes allocated to them (or external fragments)
             for (int i = 0; i < memory.size(); i++) {
                 if (memory.get(i).getProcessInPartition() != "") {
                     System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => "+memory.get(i).getProcessInPartition());
@@ -271,37 +305,43 @@ class MemAllocator{
                 System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => External fragment");
             }
             System.out.println(notAllocated);
+
+            //This count just to return back to first fit allocation after choosing to compact
+            // (for the not allocated, we allocate them after compaction if a partition was suitable)
             if(count>0){break;}
             count++;
             System.out.println("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
             String choice=scanner.next();
-            if(choice.equals(new String("1"))){
+            if(choice.equals(new String("1"))){//yes
                 notAllocated="\n";
                 int freeMemorySize=0;
                 for (int i = 0; i < memory.size(); i++) {
                     if (memory.get(i).getProcessInPartition() == "") {
-                        freeMemorySize+=memory.get(i).getPartitionSize();
+                        freeMemorySize+=memory.get(i).getPartitionSize();//Getting total free memory
                     }
                 }
 
                 List<Partition> memoryOccupied=new ArrayList<Partition>();
                 for (int i = 0; i < memory.size(); i++) {
                     if (memory.get(i).getIsOccupied()==true) {
-                        memoryOccupied.add(memory.get(i));
+                        memoryOccupied.add(memory.get(i));//Getting just the ones that were occupied,
+                        // as we will create a one large partition out of the free memory
                     }
                 }
                 memory=memoryOccupied;
                 List<Process> leftProcesses=new ArrayList<Process>();
                 for (int i = 0; i < processes.size(); i++) {
                     if(processes.get(i).getIsAllocated()==false){
-                        leftProcesses.add(processes.get(i));
+                        leftProcesses.add(processes.get(i));//Getting not allocated processes
                     }
                 }
                 processes=leftProcesses;
+
+                //Creating the new partition of size == free memory available
                 partitionCount++;
                 Partition freeMemoryPartition = new Partition("Partition "+partitionCount,freeMemorySize,"",false);
                 memory.add(freeMemoryPartition);
-            } else if (choice.equals(new String("2"))) {
+            } else if (choice.equals(new String("2"))) {//no
                 break;
             }else{
                 System.out.println("Invalid choice");
@@ -314,10 +354,12 @@ class MemAllocator{
     private Partition getMinDiff(Integer processSize){
         Integer MAX=0;
         for (int i = 0; i < memory.size(); i++) {MAX+=memory.get(i).getPartitionSize();}
+        //just init value for comparison and to check with if we didn't find the best fit(not allocated)
         Partition minDiffPartition = new Partition("None",MAX,"",true);
         for (int i = 0; i < memory.size(); i++) {
             if(!memory.get(i).getIsOccupied()){
                 Integer currentDiff=memory.get(i).getPartitionSize()-processSize;
+                //check if the difference between the current partition size and the process size are actually better/less, if so we set it as the best fit
                 if(currentDiff>=0 && currentDiff<minDiffPartition.getPartitionSize()-processSize){
                     minDiffPartition=memory.get(i);
                 }
@@ -326,6 +368,7 @@ class MemAllocator{
         return minDiffPartition;
     }
     public void runBestFit(){
+        //making sure not to invoke by a memory allocator already set to another policy
         if(policy!="Best-Fit"){
             return;
         }
@@ -335,27 +378,35 @@ class MemAllocator{
         while(true){
             for (int i = 0; i < processes.size(); i++) {
                 Partition bestFitPartition=getMinDiff(processes.get(i).getProcessSize());
+                //If we didn't find the best fit, can't be allocated
                 if(bestFitPartition.getPartitionName()=="None"){
                     notAllocated+=processes.get(i).getProcessName()+" can not be allocated\n";
                 }else{
-                    processes.get(i).setIsAllocated(true);
+                    processes.get(i).setIsAllocated(true);//set the process status to be allocated
+                    //now we check if it was larger, we create new partition out of the remaining size of the partition
                     if(bestFitPartition.getPartitionSize()>processes.get(i).getProcessSize()){
                         Integer remainingSize=bestFitPartition.getPartitionSize()-processes.get(i).getProcessSize();
 
+                        //allocating the original partition for the size of the process
                         bestFitPartition.setPartitionSize(processes.get(i).getProcessSize());
                         memory.get(memory.indexOf(bestFitPartition)).setPartitionSize(processes.get(i).getProcessSize());
 
+                        //we'll create a new partition, so we increment the latest largest partition number
                         partitionCount++;
+                        //Creating the new process of size=remaining size, setting it as not occupied
                         Partition newPartition = new Partition("Partition "+partitionCount,remainingSize,"",false);
                         memory.add(memory.indexOf(bestFitPartition)+1,newPartition);
                     }
+                    //set the partition to be allocated
                     bestFitPartition.setIsOccupied(true);
                     memory.get(memory.indexOf(bestFitPartition)).setIsOccupied(true);
 
+                    //set process to be in the partition
                     bestFitPartition.setProcessInPartition(processes.get(i).getProcessName());
                     memory.get(memory.indexOf(bestFitPartition)).setProcessInPartition(processes.get(i).getProcessName());
                 }
             }
+            //Printing partitions and processes allocated to them (or external fragments)
             for (int i = 0; i < memory.size(); i++) {
                 if (memory.get(i).getProcessInPartition() != "") {
                     System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => "+memory.get(i).getProcessInPartition());
@@ -364,37 +415,41 @@ class MemAllocator{
                 System.out.println(memory.get(i).getPartitionName()+" ("+memory.get(i).getPartitionSize()+" KB) => External fragment");
             }
             System.out.println(notAllocated);
+            //This count just to return back to first fit allocation after choosing to compact
+            // (for the not allocated, we allocate them after compaction if a partition was suitable)
             if(count>0){break;}
             count++;
             System.out.println("\nDo you want to compact?\n1. yes\n2. no\nSelect 1 or 2:");
             String choice=scanner.next();
-            if(choice.equals(new String("1"))){
+            if(choice.equals(new String("1"))){//yes
                 notAllocated="\n";
                 int freeMemorySize=0;
                 for (int i = 0; i < memory.size(); i++) {
                     if (memory.get(i).getProcessInPartition() == "") {
-                        freeMemorySize+=memory.get(i).getPartitionSize();
+                        freeMemorySize+=memory.get(i).getPartitionSize();//Getting total free memory
                     }
                 }
 
                 List<Partition> memoryOccupied=new ArrayList<Partition>();
                 for (int i = 0; i < memory.size(); i++) {
                     if (memory.get(i).getIsOccupied()==true) {
-                        memoryOccupied.add(memory.get(i));
+                        memoryOccupied.add(memory.get(i));//Getting just the ones that were occupied,
+                        // as we will create a one large partition out of the free memory
                     }
                 }
                 memory=memoryOccupied;
                 List<Process> leftProcesses=new ArrayList<Process>();
                 for (int i = 0; i < processes.size(); i++) {
                     if(processes.get(i).getIsAllocated()==false){
-                        leftProcesses.add(processes.get(i));
+                        leftProcesses.add(processes.get(i));//Getting not allocated processes
                     }
                 }
                 processes=leftProcesses;
+                //Creating the new partition of size == free memory available
                 partitionCount++;
                 Partition freeMemoryPartition = new Partition("Partition "+partitionCount,freeMemorySize,"",false);
                 memory.add(freeMemoryPartition);
-            } else if (choice.equals(new String("2"))){
+            } else if (choice.equals(new String("2"))){//no
                 break;
             }else{
                 System.out.println("Invalid choice");
@@ -406,8 +461,6 @@ class MemAllocator{
 }
 public class Main {
     public static void main(String[] args) {
-        //In java memory.add(index, elem)
-        // this element will be in that index, and what was in that index will be pushed to the right
         Scanner scanner= new Scanner(System.in).useDelimiter("\n");
         System.out.print("Enter the number of partitions: ");
         int numberOfPartitions = scanner.nextInt();
@@ -468,7 +521,7 @@ public class Main {
                 //Worst fit
                 MemAllocator memAllocator= new MemAllocator("Worst-Fit",memory,processes,partitionCount);
                 memAllocator.runWorstFit();
-            } else if (choice.equals(new String("q"))) {
+            } else if (choice.equals(new String("q"))) {//quit
                 break;
             } else{
                 System.out.println("Invalid choice, choose from menu.");
